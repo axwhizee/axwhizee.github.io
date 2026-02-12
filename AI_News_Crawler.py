@@ -26,11 +26,11 @@ DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY") # 环境变量中读取D
 
 # 定义要监控的 AI 领域权威博客 RSS 地址列表
 RSS_SOURCES = [
-    "https://ai.googleblog.com/feeds/posts/default?alt=rss",      # Google AI Blog
-    "https://openai.com/blog/rss/",                               # OpenAI Blog
-    "https://deepmind.com/blog/feed/",                            # DeepMind Blog
-    "https://huggingface.co/blog/feed.xml",                       # Hugging Face Blog
-    "https://bair.berkeley.edu/blog/feed.xml"                     # BAIR (Berkeley AI Research)
+    "https://research.google/blog/rss/",        # Google AI Blog
+    "https://openai.com/news/rss.xml",          # OpenAI Blog
+    "https://deepmind.com/blog/feed/",          # DeepMind Blog
+    "https://huggingface.co/blog/feed.xml",     # Hugging Face Blog
+    "https://bair.berkeley.edu/blog/feed.xml"   # BAIR (Berkeley AI Research)
 ]
 
 # 计算“7天前”的 UTC 时间点，用于过滤近期文章
@@ -215,12 +215,13 @@ if __name__ == "__main__":
     print("正在调用 Qwen-Max（通过 OpenAI 兼容接口）生成周报...")
     report, token_usage = generate_weekly_report(articles)
 
+    # 获取日期以便生成文档
     date = datetime.now().date()
     # 将报告写入文件，头部添加 Front Matter（适用于静态博客如 Hugo）
-    with open(f"{date}-Post.md", "w", encoding="utf-8") as f:
+    with open(f"./_posts/{date}-Post.md", "w", encoding="utf-8") as f:
         if report is not None:
             f.write(f"""---
-title: "AI_Weekly_Report"
+title: "AI Weekly Report({date})"
 date: {date}
 ---
 {report}
@@ -229,3 +230,16 @@ date: {date}
             f.write("# 无生成结果")
     
     print(f"📄 周报生成成功！已保存至: AI_Weekly_Reporter.md\n使用Token：{token_usage}")
+
+"""日志
+正在抓取最近7天的AI前沿文章...
+Fetching: https://research.google/blog/rss/
+Fetching: https://openai.com/news/rss.xml
+Fetching: https://deepmind.com/blog/feed/
+Fetching: https://huggingface.co/blog/feed.xml
+Fetching: https://bair.berkeley.edu/blog/feed.xml
+✅ 共获取 11 篇新文章。
+正在调用 Qwen-Max（通过 OpenAI 兼容接口）生成周报...
+📄 周报生成成功！已保存至: AI_Weekly_Reporter.md
+使用Token：1566
+"""
