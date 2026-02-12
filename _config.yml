@@ -1,4 +1,10 @@
-theme: minima
-title: axwhizee's-Blog
-author: axwhizee
-description: Just a demo.
+title: "AI Daily Digest"
+email: ""
+description: "每日AI领域最新进展摘要"
+baseurl: "" 
+url: "https://yourusername.github.io" 
+timezone: Asia/Shanghai
+permalink: /:categories/:year/:month/:day/:title:output_ext
+markdown: kramdown
+highlighter: rouge
+plugins: []

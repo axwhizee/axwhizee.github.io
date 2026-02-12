@@ -1,0 +1,438 @@
+# AI Daily Digest Blog Deployment Workflow
+# 自动构建Jekyll静态博客并部署到GitHub Pages
+# 包含Python爬虫脚本运行和AI新闻内容生成
+# 版本: v2.0
+# 更新日期: 2026-02-12
+
+name: "AI Daily Digest Blog Deployment"
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '.github/**'
+      - 'README.md'
+      - 'LICENSE'
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天 UTC 时间 02:00 (北京时间 10:00) 运行一次
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      manual_deploy:
+        description: '手动触发部署'
+        required: false
+        default: 'true'
+        type: boolean
+      force_rebuild:
+        description: '强制重新构建 (忽略缓存)'
+        required: false
+        default: 'false'
+        type: boolean
+      crawler_mode:
+        description: '爬虫模式'
+        required: false
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - weekly
+          - full
+
+# 设置并发控制，避免多次运行冲突
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 作业 1: 代码质量检查与测试
+  lint-and-test:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python linting tools
+        run: |
+          pip install flake8 pylint pyyaml
+
+      - name: Lint Python code
+        run: |
+          flake8 *.py --max-line-length=120 --exclude=.git,__pycache__,venv
+        continue-on-error: true
+
+      - name: Validate YAML config
+        run: |
+          python -c "import yaml; yaml.safe_load(open('config.yaml'))" || echo "Config validation skipped (file not present in repo)"
+        continue-on-error: true
+
+  # 作业 2: 构建与部署
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      ALI_BAILLAN_API_KEY: ${{ secrets.ALI_BAILLAN_API_KEY }}
+      BLOG_TITLE: "AI Daily Digest"
+      BLOG_DESCRIPTION: "每日AI领域最新进展摘要 - 深度学习、NLP、计算机视觉与机器人技术"
+      BUILD_DATE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true' && 'force-rebuild' || github.run_id }}
+      JEKYLL_ENV: production
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          
+      - name: Setup Git identity
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git config --global core.quotePath false
+          
+      # --- Ruby & Jekyll Setup ---
+      - name: Set up Ruby for Jekyll
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          cache-version: 1
+          
+      - name: Install Jekyll and dependencies
+        run: |
+          gem install jekyll bundler jekyll-sitemap jekyll-feed jekyll-seo-tag jekyll-paginate jekyll-archives
+          bundle install
+          
+      # --- Python & Crawler Setup ---
+      - name: Set up Python for crawler
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          
+      - name: Install Python dependencies
+        run: |
+          pip install requests feedparser beautifulsoup4 pyyaml python-dotenv openai
+          pip install --upgrade pip setuptools wheel
+          
+      # --- Configuration Generation ---
+      - name: Create configuration file
+        run: |
+          mkdir -p ./_posts
+          cat > config.yaml << 'EOF'
+          # AI News Crawler Configuration
+          # 阿里百炼API配置
+          ali_baillan:
+            api_key: "${{ secrets.ALI_BAILLAN_API_KEY }}"
+            endpoint: "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+            model: "qwen-plus"
+            max_tokens: 2000
+            temperature: 0.7
+          
+          # RSS数据源配置 (扩展版)
+          rss_sources:
+            # 学术研究源
+            - url: "https://rss.arxiv.org/rss/cs.AI"
+              name: "ArXiv AI"
+              type: "academic"
+              language: "en"
+              priority: 10
+            - url: "https://rss.arxiv.org/rss/cs.LG"
+              name: "ArXiv Machine Learning"
+              type: "academic"
+              language: "en"
+              priority: 10
+            - url: "https://rss.arxiv.org/rss/cs.CL"
+              name: "ArXiv NLP"
+              type: "academic"
+              language: "en"
+              priority: 10
+            - url: "https://rss.arxiv.org/rss/cs.CV"
+              name: "ArXiv Computer Vision"
+              type: "academic"
+              language: "en"
+              priority: 10
+            - url: "https://rss.arxiv.org/rss/cs.RO"
+              name: "ArXiv Robotics"
+              type: "academic"
+              language: "en"
+              priority: 8
+            - url: "https://rss.arxiv.org/rss/cs.NE"
+              name: "ArXiv Neural Networks"
+              type: "academic"
+              language: "en"
+              priority: 8
+            - url: "https://rss.arxiv.org/rss/stat.ML"
+              name: "ArXiv Statistics ML"
+              type: "academic"
+              language: "en"
+              priority: 8
+            
+            # 官方实验室博客
+            - url: "https://deepmind.google/blog/rss.xml"
+              name: "Google DeepMind"
+              type: "blog"
+              language: "en"
+              priority: 9
+            - url: "https://openai.com/blog/rss.xml"
+              name: "OpenAI"
+              type: "blog"
+              language: "en"
+              priority: 9
+            - url: "https://research.google/blog/rss.xml"
+              name: "Google Research"
+              type: "blog"
+              language: "en"
+              priority: 9
+            - url: "https://ai.facebook.com/blog/rss/"
+              name: "Meta AI (FAIR)"
+              type: "blog"
+              language: "en"
+              priority: 9
+            - url: "https://www.anthropic.com/index/rss.xml"
+              name: "Anthropic"
+              type: "blog"
+              language: "en"
+              priority: 9
+            - url: "https://blogs.microsoft.com/ai/rss/"
+              name: "Microsoft AI"
+              type: "blog"
+              language: "en"
+              priority: 8
+            - url: "https://blogs.nvidia.com/ai/feed/"
+              name: "NVIDIA AI"
+              type: "blog"
+              language: "en"
+              priority: 8
+            - url: "https://www.apple.com/newsroom/rss-feed.rss"
+              name: "Apple Machine Learning"
+              type: "blog"
+              language: "en"
+              filter: "machine learning|ai"
+              priority: 7
+            
+            # 开源社区与框架
+            - url: "https://huggingface.co/blog/feed.xml"
+              name: "Hugging Face"
+              type: "blog"
+              language: "en"
+              priority: 9
+            - url: "https://pytorch.org/blog/feed.xml"
+              name: "PyTorch Blog"
+              type: "blog"
+              language: "en"
+              priority: 7
+            - url: "https://blog.tensorflow.org/rss.xml"
+              name: "TensorFlow Blog"
+              type: "blog"
+              language: "en"
+              priority: 7
+            
+            # 科技媒体与新闻
+            - url: "https://techcrunch.com/category/artificial-intelligence/feed/"
+              name: "TechCrunch AI"
+              type: "news"
+              language: "en"
+              priority: 6
+            - url: "https://www.technologyreview.com/feed/"
+              name: "MIT Technology Review"
+              type: "news"
+              language: "en"
+              priority: 6
+            - url: "https://www.wired.com/feed/category/ai/latest/rss"
+              name: "Wired AI"
+              type: "news"
+              language: "en"
+              priority: 6
+            - url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
+              name: "The Verge AI"
+              type: "news"
+              language: "en"
+              priority: 6
+            - url: "https://arstechnica.com/tag/artificial-intelligence/feed/"
+              name: "Ars Technica AI"
+              type: "news"
+              language: "en"
+              priority: 6
+            - url: "https://venturebeat.com/ai/feed/"
+              name: "VentureBeat AI"
+              type: "news"
+              language: "en"
+              priority: 6
+            - url: "https://spectrum.ieee.org/artificial-intelligence/feed"
+              name: "IEEE Spectrum AI"
+              type: "news"
+              language: "en"
+              priority: 5
+            - url: "https://www.quantamagazine.org/feed/"
+              name: "Quanta Magazine (CS/AI)"
+              type: "news"
+              language: "en"
+              filter: "computer|algorithm"
+              priority: 5
+            
+            # 中文资讯源
+            - url: "https://www.jiqizhixin.com/rss"
+              name: "机器之心"
+              type: "news"
+              language: "zh"
+              priority: 8
+            - url: "https://www.leiphone.com/feed"
+              name: "雷锋网 AI"
+              type: "news"
+              language: "zh"
+              priority: 7
+            - url: "https://36kr.com/feed"
+              name: "36氪 (AI筛选)"
+              type: "news"
+              language: "zh"
+              filter: "人工智能|大模型|AI"
+              priority: 7
+          
+          # 爬虫运行配置
+          crawler:
+            max_articles: 25
+            days_back: 3
+            output_dir: "./_posts"
+            log_level: "INFO"
+            timeout: 30
+            retry_attempts: 3
+            user_agent: "AI-Daily-Digest-Crawler/2.0 (+https://github.com/yourusername/ai-daily-digest)"
+            rate_limit_delay: 1 # 秒
+          
+          # AI内容生成配置
+          article_generation:
+            summary_length: 600
+            include_original_content: true
+            generate_tags: true
+            max_tags_per_article: 5
+            default_categories: ["AI新闻", "每日摘要"]
+            translation_enabled: true
+            target_language: "zh-CN"
+            
+            # Prompt模板
+            system_prompt: |
+              你是一个专业的科技新闻编辑，擅长总结人工智能领域的最新进展。
+              请根据提供的文章内容，生成一份简明扼要的中文摘要。
+              摘要应包含：核心观点、关键技术点、应用场景（如有）。
+              保持客观、专业的语气。
+          
+          # Jekyll集成配置
+          jekyll_integration:
+            front_matter_template: |
+              ---
+              layout: post
+              title: "{title}"
+              date: {date}
+              categories: {categories}
+              tags: {tags}
+              author: AI Digest Bot
+              excerpt: "{excerpt}"
+              ---
+            date_format: "%Y-%m-%d %H:%M:%S %z"
+            timezone: "Asia/Shanghai"
+            image_download: false
+          EOF
+          
+      # --- Execution ---
+      - name: Run AI News Crawler
+        id: crawler
+        run: |
+          echo "Starting AI News Crawler..."
+          python ai_news_crawler.py --config config.yaml --mode ${{ github.event.inputs.crawler_mode || 'daily' }}
+          echo "Crawler completed. Generated files:"
+          ls -la ./_posts/ 2>/dev/null || echo "No posts directory yet"
+        continue-on-error: true
+        
+      - name: Check for new posts
+        id: check_posts
+        run: |
+          if [ -z "$(ls -A ./_posts/*.md 2>/dev/null)" ]; then
+            echo "has_posts=false" >> $GITHUB_OUTPUT
+            echo "No new posts generated."
+          else
+            echo "has_posts=true" >> $GITHUB_OUTPUT
+            echo "New posts detected."
+          fi
+          
+      - name: Build Jekyll site
+        if: steps.check_posts.outputs.has_posts == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "Building Jekyll site..."
+          bundle exec jekyll build --trace --verbose
+          echo "Jekyll build completed. Site generated at: ./_site"
+          
+      - name: Upload site artifact
+        if: steps.check_posts.outputs.has_posts == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v3
+        with:
+          name: jekyll-site
+          path: ./_site
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: steps.check_posts.outputs.has_posts == 'true' || github.event_name == 'workflow_dispatch'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          force_orphan: true
+          keep_files: false
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: "Deploy Jekyll site to GitHub Pages [skip ci]"
+          
+      - name: Verify deployment
+        if: steps.deployment.outputs.page_url != ''
+        run: |
+          echo "Deployment verification..."
+          echo "Workflow completed at: $(date)"
+          echo "Repository: ${{ github.repository }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Page URL: ${{ steps.deployment.outputs.page_url }}"
+          
+      - name: Send notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment successful!"
+            # 这里可以添加发送邮件或Slack通知的逻辑
+          else
+            echo "❌ Deployment failed with status: ${{ job.status }}"
+            exit 1
+          fi
+
+# GitHub Secrets配置说明：
+# 1. 进入GitHub仓库设置 -> Secrets and variables -> Actions -> New repository secret
+# 2. 添加以下Secret：
+#    - ALI_BAILLAN_API_KEY: 您的阿里百炼API密钥 (必填)
+#    - GITHUB_TOKEN: 自动生成，无需手动设置
+#
+# 手动触发部署说明：
+# 1. 进入GitHub仓库的Actions页面
+# 2. 选择"AI Daily Digest Blog Deployment"工作流
+# 3. 点击"Run workflow"按钮
+# 4. 选择分支（默认为main）和部署选项
+#
+# 故障排除：
+# 1. 如果构建失败，检查config.yaml格式是否正确
+# 2. 确保ALI_BAILLAN_API_KEY已正确设置
+# 3. 查看工作流运行日志了解具体错误
+# 4. 确保仓库设置中开启了GitHub Pages功能，并指向gh-pages分支

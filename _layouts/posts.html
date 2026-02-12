@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title }} | {{ site.title }}</title>
+</head>
+<body>
+  {% include header.html %}
+  <article>
+    <header>
+      <h1>{{ page.title }}</h1>
+      <time>{{ page.date | date: "%Y年%m月%d日" }}</time>
+      {% if page.tags %}
+        <div class="tags">
+          {% for tag in page.tags %}
+            <span class="tag">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </header>
+    <div class="content">
+      {{ content }}
+    </div>
+  </article>
+  {% include footer.html %}
+</body>
+</html>
