@@ -1,0 +1,36 @@
+name: Run Weekly Python Script # 工作流的名称
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+
+on:
+  schedule:
+    # 使用 Cron 表达式设置运行频率
+    # 例如 '0 3 * * 0' 表示每周日凌晨 3 点 (UTC 时间)
+    # 格式为: 分钟 小时 日 月 星期几
+    # 你可以根据需要修改这个时间
+    - cron: '50 23 * * 0'
+  # 允许手动触发，方便测试
+  workflow_dispatch:
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest # 使用 Ubuntu 环境运行作业
+
+    steps:
+    - name: Check out repository # 第一步：拉取仓库代码
+      uses: actions/checkout@v4
+
+    - name: Set up Python # 第二步：安装 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # 指定 Python 版本
+
+    - name: Install dependencies # 第三步：安装依赖 (如果有 requirements.txt)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt; fi
+      # "如果根目录下存在 requirements.txt 文件，就执行 pip install -r ... 命令"
+
+    - name: Run Python Script # 第四步：运行你的 Python 脚本
+      env: # 使用 env 关键字将 Secrets 注入为环境变量
+        DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }} # 将步骤1中设置的 Secret 映射到环境变量 API_KEY
+      run: python AI_News_Crawler.py # 替换成你的 Python 脚本的实际文件名
