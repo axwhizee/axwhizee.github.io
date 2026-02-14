@@ -34,9 +34,8 @@ jobs:
         DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
       run: python AI_News_Crawler.py
 
-    - name: Commit and Push Changes # 第六步：提交post文件
+    - name: Commit and Push Changes # 第五步：提交post文件
       run: |
-        
         git add . # 将工作区的所有更改全部添加到 Git 暂存区
         if git diff --quiet && git diff --cached --quiet; then # 检查变更
           echo "No changes to commit. Exiting."
