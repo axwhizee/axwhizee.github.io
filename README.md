@@ -23,3 +23,7 @@ main/
 ```
 
 在AI的辅助下，为博客添加了一个每周更新文章的 Python 脚本，通过 Github Actions 自动推送
+
+## 参考
+
+1. [GitHub Actions : Python](https://docs.github.com/en/actions/tutorials/build-and-test-code/python)
