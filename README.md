@@ -2,7 +2,7 @@
 
 > 用于试手的个人博客，顺便记录操作流程。本篇并未遵守中文写作规范
 
-关于**Github Pages**的笔记在Coding仓库（还没准备好开放）中，下面是一个Jekyll网站项目的结构：
+关于 **Github Pages** 的笔记在 Coding 仓库（还没准备好开放）中，下面是一个 Jekyll 网站项目的结构：（当然，我没有搭建 Jekyll 环境自己构建网页，依赖的是 **Github Actions** 的自动构建）
 
 ```shell
 main/
@@ -22,4 +22,4 @@ main/
 └── Gemfile            # Ruby 依赖管理
 ```
 
-当然，我没有搭建Jekyll环境自己构建网页，依赖的是**Github Actions**的自动构建
+在AI的辅助下，为博客添加了一个每周更新文章的 Python 脚本，通过 Github Actions 自动推送

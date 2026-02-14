@@ -1,5 +1,5 @@
 name: Run Weekly Python Script # 工作流的名称
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: Running `AI_Weekly_Update.py` and updating post
 
 on:
   schedule:
@@ -34,3 +34,24 @@ jobs:
       env: # 使用 env 关键字将 Secrets 注入为环境变量
         DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }} # 将步骤1中设置的 Secret 映射到环境变量 API_KEY
       run: python AI_News_Crawler.py # 替换成你的 Python 脚本的实际文件名
+
+    - name: Commit and Push Changes
+      run: |
+        # 检查是否有任何变更
+        if git diff --quiet && git diff --cached --quiet; then
+          echo "No changes to commit. Exiting."
+          exit 0
+        fi
+        # 配置 Git 用户信息 (必须)
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        
+        # 添加所有变更，包括 _posts 目录下的新文件到Git暂存区
+        git add .
+        
+        # 提交更改
+        git commit -m "Auto-generate new post [skip ci]" # [skip ci] 可选，用于防止触发新的 CI 工作流
+        
+        # 推送更改到当前分支 (通常是 main 或 master)
+        git push origin HEAD:${{ github.ref_name }}
+      # <<<--- 结束新增步骤 --->>>

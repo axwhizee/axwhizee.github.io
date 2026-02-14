@@ -191,7 +191,7 @@ if __name__ == "__main__":
     # 将报告写入文件，头部添加 Front Matter（适用于静态博客如 Hugo）
     out_put(f"""---\ntitle: "AI Weekly Report({date})"\ndate: {date}\n---\n{report}""",
             f"./_posts/{date}-Post.md")
-    print(f"📄 周报生成成功！已保存至: AI_Weekly_Reporter.md\n使用Token：{token_usage}")
+    print(f"📄 周报生成成功！\n使用Token：{token_usage}")
 
 """日志
 正在抓取最近7天的AI前沿文章...
