@@ -5,8 +5,8 @@ AI 领域周报生成器
 功能概述：
 1. 从多个顶级 AI 机构的 RSS 源抓取最近 7 天内的文章；
 2. 提取每篇文章的标题、链接、摘要和来源；
-3. 将汇总信息通过阿里云百炼（DashScope）的 Qwen-Max 模型（兼容 OpenAI API）生成一份结构化的 Markdown 周报；
-4. 将最终报告写入本地文件 `AI_Weekly_Report.md`。
+3. 将汇总信息通过阿里云百炼（DashScope）平台的大模型生成一份结构化的 Markdown 周报；
+4. 将最终报告生成为新的博客文章。
 
 依赖库说明：
 - feedparser：解析 RSS/Atom 订阅源
@@ -31,7 +31,7 @@ RSS_SOURCE = [
     "https://huggingface.co/blog/feed.xml",     # Hugging Face Blog
     "https://bair.berkeley.edu/blog/feed.xml"   # BAIR (Berkeley AI Research)
 ]
-MODULE = "deepseek-v3.1"
+MODULE = "qwen-plus-2025-12-01"
 # 计算“7天前”的 UTC 时间点，用于过滤近期文章
 SEVEN_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=7)
 
@@ -117,7 +117,7 @@ def fetch_rss_feed_entries(rss_source):
     return articles
 
 def generate_weekly_report(articles) -> tuple[str , int]:
-    """调用 DashScope 的 Qwen-Max 模型（通过 OpenAI 兼容 API）生成 AI 周报。"""
+    """调用 DashScope 的大模型（通过 OpenAI 兼容 API）生成 AI 周报。"""
     if not articles:
         raise ValueError("# AI领域最新进展周报\n\n本周无新发布内容。")
     # 构建提供给大模型的原始上下文
@@ -130,11 +130,11 @@ def generate_weekly_report(articles) -> tuple[str , int]:
     # out_put(content)
     # 构造提示词（Prompt），明确要求模型输出结构化、有洞察力的分析
     prompt = f"""请基于以下近期 AI 领域的技术博客摘要（含链接），撰写一份名为《AI领域最新进展周报》的报告，要求：\n
-1. 报告必须使用 Markdown 格式；
-2. 标题为：**AI领域最新进展周报**；
+1. 报告必须使用 Markdown 格式
+2. 标题为：**AI领域最新进展周报**（带时间）
 3. 内容需包含：
-   - 当前主要发展方向（如多模态、推理能力、开源生态、具身智能等）；
-   - 本周突出的流行产品或技术（如新模型、框架、工具）；
+   - 当前主要发展方向（如多模态、推理能力、开源生态、具身智能等）
+   - 本周突出的流行产品或技术（如新模型、框架、工具），附响应链接
 \n{content}\n"""
     # 初始化 OpenAI 客户端，指向 DashScope 的兼容 API 端点
     client = OpenAI(

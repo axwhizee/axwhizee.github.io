@@ -45,6 +45,6 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         # 提交更改
-        git commit -m "Auto-generate new post(s) [skip ci]" # [skip ci] 用于防止触发新的 CI 工作流
+        git commit -m "Auto-generate Weekly_Update"
         # 推送更改到当前分支 (通常是 main 或 master)
         git push origin HEAD:${{ github.ref_name }}
