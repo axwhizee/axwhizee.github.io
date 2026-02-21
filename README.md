@@ -22,7 +22,7 @@ main/
 └── Gemfile            # Ruby 依赖管理
 ```
 
-在AI的辅助下，为博客添加了一个每周更新文章的 Python 脚本，通过 Github Actions 自动推送
+在AI的辅助下，为博客添加了一个每周更新文章的 Python 脚本，通过 Github Actions 自动推送，并且通知指定邮箱
 
 ## 参考
 
