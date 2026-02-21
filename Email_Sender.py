@@ -67,8 +67,8 @@ def mail_generator() -> tuple[str, str]:
         body = re.sub(r'^---\s*\n.*?\n---\s*\n', '', content, flags=re.DOTALL)
         title = f"文章：{title}生成成功"
         body = f"""来自 https://github.com/axwhizee/axwhizee.github.io 的最新文章已生成成功！
-时间：{datetime.now().strftime('%Y年%m月%d日')}\n全文如下：
-""" + f"<div>{'-'*10}\n{body}\n{'-'*10}</div>"
+时间：{datetime.now().strftime('%Y年%m月%d日')}\n全文如下：\n
+""" + f"{'-'*10}\n\n{body}"
         return title, body
     except Exception as e:
         logging.error(f"读取最新文章时发生错误: {e}")
