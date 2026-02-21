@@ -1,0 +1,35 @@
+name: Run `Email_Sender.py` to send email
+
+on:
+  schedule:
+    
+    - cron: '10 0 * * 1' # 每周一 00:10 UTC 触发
+  workflow_dispatch:
+
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: 'requirements/email_requirement.txt'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r "./requirements/email_requirement.txt"
+
+      - name: Run Python Script
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+          python Email_Sender.py
