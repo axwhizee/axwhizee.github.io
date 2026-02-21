@@ -16,8 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
-          cache: 'pip'
+          python-version: '3.x' # 脚本不需要依赖
 
       - name: Install Dependencies
         run: |
