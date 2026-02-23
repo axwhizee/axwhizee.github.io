@@ -36,16 +36,16 @@ def mail_generator() -> tuple[str, str]:
     try:
         # 获取_posts目录下的所有.md文件
         posts_dir = os.path.join(os.path.dirname(__file__), "_posts")
-        assert os.path.exists(posts_dir), "_posts目录不存在"
+        if not os.path.exists(posts_dir): raise ValueError("_posts目录不存在")
         md_files = [f for f in os.listdir(posts_dir) if f.endswith(".md")]  # 注意这行代码
-        assert md_files, "_posts目录中没有找到Markdown文件"
+        if not md_files: raise ValueError("_posts目录中没有找到Markdown文件")
         
         # 按日期排序（从文件名中提取YYYY-MM-DD）并取最新的文件
         # 重写排序函数
         def extract_date(filename)->str:
             # 尝试提取YYYY-MM-DD格式的日期
             match = re.search(r'(\d{4}-\d{2}-\d{2})', filename)
-            assert match, "提取日期为空"
+            if not match: raise ValueError("提取日期为空")
             return match.group(1)
         md_files.sort(key=extract_date, reverse=True)
         latest_file = md_files[0]
@@ -96,9 +96,9 @@ def send_email(to_email: str, subject: str, body: str) -> None:
 
     # 类型收窄
     try:
-        assert smtp_server, "缺少: SMTP_SERVER"
-        assert sender_email, "缺少: EMAIL_USER"
-        assert password, "缺少: EMAIL_PASSWORD"
+        if not smtp_server: raise ValueError("缺少: SMTP_SERVER")
+        if not sender_email: raise ValueError("缺少: EMAIL_USER")
+        if not password: raise ValueError("缺少: EMAIL_PASSWORD")
     except Exception as e:
         logging.error(f"SMTP配置不完整或无效: {e}")
         raise
@@ -151,6 +151,6 @@ if __name__ == "__main__":
     
     # 发送邮件
     to_email=os.getenv("RECIPIENT_EMAIL") or RECIPIENT_EMAIL
-    assert to_email, "缺少环境变量: RECIPIENT_EMAIL"
+    if not to_email: raise ValueError("缺少环境变量: RECIPIENT_EMAIL")
     send_email(to_email, subject=subject, body=body)
     # print(f"From: {EMAIL_USER}\nTo: {to_email}:\n{body}")
