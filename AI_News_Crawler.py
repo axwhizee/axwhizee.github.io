@@ -31,7 +31,7 @@ RSS_SOURCE = [
     "https://huggingface.co/blog/feed.xml",     # Hugging Face Blog
     "https://bair.berkeley.edu/blog/feed.xml"   # BAIR (Berkeley AI Research)
 ]
-MODULE = "qwen-plus-2025-12-01"
+MODULE = "qwen3.5-plus"
 # 计算“7天前”的 UTC 时间点，用于过滤近期文章
 SEVEN_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=7)
 
@@ -129,19 +129,19 @@ def generate_weekly_report(articles) -> tuple[str , int]:
         content += f"  链接：{art['link']}\n\n"
     # out_put(content)
     # 构造提示词（Prompt），明确要求模型输出结构化、有洞察力的分析
-    prompt = f"""请基于以下近期 AI 领域的技术博客摘要（含链接），撰写一份名为《AI领域最新进展周报》的报告，要求：\n
+    prompt = f"""请基于以下近期 AI 领域的技术博客摘要（含链接），撰写一份名为《AI领域最新进展周报》的报告，要求：\n\n
 1. 报告必须使用 Markdown 格式
 2. 标题为：**AI领域最新进展周报**（带时间）
 3. 内容需包含：
    - 当前主要发展方向（如多模态、推理能力、开源生态、具身智能等）
-   - 本周突出的流行产品或技术（如新模型、框架、工具），附响应链接
+   - 列举本周突出的流行产品或技术（如新模型、框架、工具），附相关链接
 \n{content}\n"""
     # 初始化 OpenAI 客户端，指向 DashScope 的兼容 API 端点
     client = OpenAI(
         api_key=DASHSCOPE_API_KEY,
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
     )
-    # 调用 Qwen-Max 模型生成报告
+    # 调用 AI 模型生成报告
     response = client.chat.completions.create(
         model=MODULE,
         messages=[
@@ -155,7 +155,8 @@ def generate_weekly_report(articles) -> tuple[str , int]:
             {'role': 'user', 'content': prompt}
         ],
         temperature=0.3,      # 较低温度以保证输出稳定性和事实性
-        max_tokens=3000       # 允许生成较长报告
+        max_tokens=10000,     # 允许生成较长报告
+        extra_body={"enable_search": True}  # 允许联网，
     )
     content = response.choices[0].message.content
     if content is None:
@@ -183,7 +184,7 @@ if __name__ == "__main__":
     print("正在抓取最近7天的AI前沿文章...")
     articles = fetch_rss_feed_entries(RSS_SOURCE)
     print(f"✅ 共获取 {len(articles)} 篇新文章。")
-    print(f"正在调用{MODULE}（通过 OpenAI 兼容接口）生成周报...")
+    print(f"正在调用 {MODULE}（通过 OpenAI 兼容接口）生成周报...")
     report, token_usage = generate_weekly_report(articles)
 
     # 获取日期以便生成文档
