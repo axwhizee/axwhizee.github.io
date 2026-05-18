@@ -4,12 +4,14 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "weekly-update"
+name = "ai-weekly-update" 
 version = "0.1.0"
-
 dependencies = [
-    "feedparser>=6.0.0",  # ⚠️ TOML 数组必须用逗号分隔
+    "feedparser>=6.0.0",
     "openai==2.20.0",
     "requests>=2.32.0",
     "chatbot-oai>=0.2.1",
 ]
+
+[tool.setuptools]
+py-modules = ["AI_News_Crawler", "Email_Sender"]
