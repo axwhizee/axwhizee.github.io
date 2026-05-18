@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: ai-weekly-update
+Version: 0.1.0
+License-File: LICENSE
+Requires-Dist: feedparser>=6.0.0
+Requires-Dist: openai==2.20.0
+Requires-Dist: requests>=2.32.0
+Requires-Dist: chatbot-oai>=0.2.1
+Dynamic: license-file

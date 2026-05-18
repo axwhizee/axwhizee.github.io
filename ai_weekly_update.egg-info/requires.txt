@@ -1,0 +1,4 @@
+feedparser>=6.0.0
+openai==2.20.0
+requests>=2.32.0
+chatbot-oai>=0.2.1

@@ -1,0 +1,10 @@
+AI_News_Crawler.py
+Email_Sender.py
+LICENSE
+README.md
+pyproject.toml
+ai_weekly_update.egg-info/PKG-INFO
+ai_weekly_update.egg-info/SOURCES.txt
+ai_weekly_update.egg-info/dependency_links.txt
+ai_weekly_update.egg-info/requires.txt
+ai_weekly_update.egg-info/top_level.txt
