@@ -1,12 +1,9 @@
 ---
 title: Welcome !
 ---
-# 个人博客？
+<h1 style="padding: 10pt 10pt; text-align: center;">试手博客</h1>
 
-> 用于试手的个人博客，顺便记录操作流程。本篇并未遵守中文写作规范
-
-GitHub主页：<https://github.com/axwhizee>
-
-网站项目地址：<https://github.com/axwhizee/axwhizee.github.io>
+> 网站项目地址：<https://github.com/axwhizee/axwhizee.github.io>  
+> GitHub主页：<https://github.com/axwhizee>
 
 ---

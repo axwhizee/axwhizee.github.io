@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AI 领域周报生成器
 
@@ -15,25 +14,13 @@ AI 领域周报生成器
 - datetime / email.utils：处理不同格式的发布时间
 """
 
-import feedparser
+import os
 import requests
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_tz, mktime_tz  # 用于解析 RFC 2822 格式的日期（常见于 RSS）
-from openai import OpenAI
-import os
+import feedparser
+from chatbot_oai import BotConfig, ChatBot
 
-DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY") # 环境变量中读取DashScope API密钥
-# 定义要监控的 AI 领域权威博客 RSS 地址列表
-RSS_SOURCE = [
-    "https://research.google/blog/rss/",        # Google AI Blog
-    "https://openai.com/news/rss.xml",          # OpenAI Blog
-    "https://deepmind.com/blog/feed/",          # DeepMind Blog
-    "https://huggingface.co/blog/feed.xml",     # Hugging Face Blog
-    "https://bair.berkeley.edu/blog/feed.xml"   # BAIR (Berkeley AI Research)
-]
-MODULE = "qwen3.5-plus"
-# 计算“7天前”的 UTC 时间点，用于过滤近期文章
-SEVEN_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=7)
 
 def parse_rss_date(date_str):
     """尝试将 RSS 中的日期字符串解析为标准的 datetime 对象（无时区信息，但按 UTC 处理）。
@@ -116,10 +103,35 @@ def fetch_rss_feed_entries(rss_source):
     articles.sort(key=lambda x: x['published'], reverse=True)
     return articles
 
-def generate_weekly_report(articles) -> tuple[str , int]:
-    """调用 DashScope 的大模型（通过 OpenAI 兼容 API）生成 AI 周报。"""
+def out_put(content: str, file_path: str = "./output.md")->None:
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except Exception as e:
+        raise FileNotFoundError(f"导出文件{file_path}失败：{e}\n")
+    else:
+        print(f"文件{file_path}生成成功！\n")
+
+if __name__ == "__main__":
+    # 定义要监控的 AI 领域权威博客 RSS 地址列表
+    RSS_SOURCE = [
+        "https://research.google/blog/rss/",        # Google AI Blog
+        "https://openai.com/news/rss.xml",          # OpenAI Blog
+        "https://deepmind.com/blog/feed/",          # DeepMind Blog
+        "https://huggingface.co/blog/feed.xml",     # Hugging Face Blog
+        "https://bair.berkeley.edu/blog/feed.xml"   # BAIR (Berkeley AI Research)
+    ]
+    MODULE = "qwen3.6-plus"
+    # 计算“7天前”的 UTC 时间点，用于过滤近期文章
+    SEVEN_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=7)
+
+    print("正在抓取最近7天的AI前沿文章...")
+    articles = fetch_rss_feed_entries(RSS_SOURCE)
     if not articles:
         raise ValueError("# AI领域最新进展周报\n\n本周无新发布内容。")
+    print(f"✅ 共获取 {len(articles)} 篇新文章。\n")
+
+    print(f"正在调用 {MODULE}（通过 OpenAI 兼容接口）生成周报...")
     # 构建提供给大模型的原始上下文
     content = "以下是过去一周来自 Google AI、OpenAI、DeepMind、Hugging Face 和 BAIR 等顶级 AI 机构的最新文章摘要：\n\n"
     for art in articles:
@@ -127,82 +139,27 @@ def generate_weekly_report(articles) -> tuple[str , int]:
         if art['summary']:
             content += f"  摘要：{art['summary']}\n"
         content += f"  链接：{art['link']}\n\n"
-    # out_put(content)
     # 构造提示词（Prompt），明确要求模型输出结构化、有洞察力的分析
-    prompt = f"""请基于以下近期 AI 领域的技术博客摘要（含链接），撰写一份名为《AI领域最新进展周报》的报告，要求：\n\n
-1. 报告必须使用 Markdown 格式
-2. 标题为：**AI领域最新进展周报**（带时间）
-3. 内容需包含：
-   - 当前主要发展方向（如多模态、推理能力、开源生态、具身智能等）
-   - 列举本周突出的流行产品或技术（如新模型、框架、工具），附相关链接
-\n{content}\n"""
-    # 初始化 OpenAI 客户端，指向 DashScope 的兼容 API 端点
-    client = OpenAI(
-        api_key=DASHSCOPE_API_KEY,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-    )
-    # 调用 AI 模型生成报告
-    response = client.chat.completions.create(
+    prompt = ("请基于以下近期 AI 领域的技术博客摘要（含链接），撰写一份名为《AI领域最新进展周报》的报告，要求：\n\n"
+        "1. 报告必须使用 Markdown 格式"
+        "2. 标题为：**AI领域最新进展周报**（带时间）"
+        "3. 内容需包含："
+        "   - 当前主要发展方向（如多模态、推理能力、开源生态、具身智能等）"
+        "   - 列举本周突出的流行产品或技术（如新模型、框架、工具），附相关链接"
+        f"<contents>\n{content}\n</contents>"
+        )
+
+    config = BotConfig(
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         model=MODULE,
-        messages=[
-            {
-                'role': 'system',
-                'content': (
-                    '你是一位资深 AI 行业分析师，你的措辞应当：专业、简洁、有洞察力，避免罗列，'
-                    '且尤其注意：不要虚构未提及的内容，仅基于所提供与搜索到的资料信息推理。'
-                )
-            },
-            {'role': 'user', 'content': prompt}
-        ],
-        temperature=0.3,      # 较低温度以保证输出稳定性和事实性
-        max_tokens=10000,     # 允许生成较长报告
-        extra_body={"enable_search": True}  # 允许联网，
+        env_key_name="DASHSCOPE_API_KEY",
+        temperature=1,  # 无语
+        extra_body={"enable_thinking": False},  # 适用于 DashScope 平台的参数，关闭思考功能
     )
-    content = response.choices[0].message.content
-    if content is None:
-        raise ValueError("响应为空")
-    try:
-        if response.usage is None:  # 确保usage不为None，但容许如此
-            token_usage = 0
-            raise Exception("Usage info missing")
-        token_usage = response.usage.total_tokens
-    except:
-        print("警告：无法解析token使用量\n")
-        token_usage = 0
-    return content, token_usage
-
-def out_put(content: str, file_path: str = "./output.md"):
-    try:
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-    except Exception as e:
-        print(f"导出文件{file_path}失败！{e}\n")
-    finally:
-        print(f"文件{file_path}导出成功！\n")
-
-if __name__ == "__main__":
-    print("正在抓取最近7天的AI前沿文章...")
-    articles = fetch_rss_feed_entries(RSS_SOURCE)
-    print(f"✅ 共获取 {len(articles)} 篇新文章。")
-    print(f"正在调用 {MODULE}（通过 OpenAI 兼容接口）生成周报...")
-    report, token_usage = generate_weekly_report(articles)
-
+    result = ChatBot(config).chat(prompt)
     # 获取日期以便生成文档
     date = datetime.now().date()
     # 将报告写入文件，头部添加 Front Matter（适用于静态博客如 Hugo）
-    out_put(f"""---\ntitle: "AI Weekly Report({date})"\ndate: {date}\n---\n{report}""",
+    out_put(f"""---\ntitle: "AI Weekly Report({date})"\ndate: {date}\n---\n{result}""",
             f"./_posts/{date}-Post.md")
-    print(f"📄 周报生成成功！\n使用Token：{token_usage}")
-
-"""日志
-正在抓取最近7天的AI前沿文章...
-Fetching: https://research.google/blog/rss/
-Fetching: https://openai.com/news/rss.xml
-Fetching: https://deepmind.com/blog/feed/
-Fetching: https://huggingface.co/blog/feed.xml
-Fetching: https://bair.berkeley.edu/blog/feed.xml
-✅ 共获取 11 篇新文章。
-正在调用 Qwen-Max（通过 OpenAI 兼容接口）生成周报...
-📄 周报生成成功！已保存至: AI_Weekly_Reporter.md
-使用Token：1566
-"""
+    print(f"📄 周报生成成功！\n使用Token：{ChatBot.token_usage}")
