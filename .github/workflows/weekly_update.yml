@@ -15,7 +15,7 @@ jobs:
 
     steps:
     - name: Check out repository # 第一步：拉取仓库代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python # 第二步：安装 Python 环境
       uses: actions/setup-python@v5
