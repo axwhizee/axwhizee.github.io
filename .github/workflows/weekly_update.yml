@@ -15,10 +15,10 @@ jobs:
 
     steps:
     - name: Check out repository # 第一步：拉取仓库代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python # 第二步：安装 Python 环境
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.x'
         cache: 'pip'  # 启用依赖缓存，提升后续安装效率
